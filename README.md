@@ -26,6 +26,8 @@
 
 ### 运行方式
 
+**本地运行**
+
 环境要求：Node.js 22 或更高版本、npm，以及支持 WebGL 的桌面浏览器。
 
 ```bash
@@ -40,6 +42,31 @@ http://localhost:8080
 ```
 
 四人测试时，使用四个独立浏览器窗口访问同一地址，并分别选择东、南、西、北座位。服务器默认监听 `0.0.0.0:8080`；如需更换端口，可设置 `PORT` 环境变量，例如 `PORT=8081 npm start`。
+
+**公网服务器运行**
+
+<http://43.143.108.152:8080>
+
+四位玩家可以通过该公网地址从不同地点访问同一张麻将桌，无需在各自电脑上安装或运行服务器。
+
+### 操作说明
+
+**键盘快捷键**
+
+| 按键 | 功能 |
+|---|---|
+| `A` / `D` | 旋转当前手持麻将牌 |
+| `W` | 翻转当前手持麻将牌 |
+| `S` | 将当前手持麻将牌复位为正对自己的状态（无旋转、无翻面），不会将牌放回原位 |
+
+**鼠标操作**
+
+| 操作 | 功能 |
+|---|---|
+| 鼠标左键单击 | 拾取 / 放下麻将牌 |
+| 鼠标右键单击 | 撤销当前拾取操作 |
+| 按住鼠标左键并拖动 | 旋转摄像机视角 |
+| 鼠标滚轮 | 缩放摄像机视角 |
 
 ### 项目结构
 
@@ -70,10 +97,6 @@ http://localhost:8080
 
 ---
 
-
-
-
-
 ### Overview
 
 **Mashen · 3D Free Mahjong** is a shared 3D mahjong table for four players. Its design is inspired by the original **queju_mahjong** project:
@@ -95,6 +118,8 @@ This project was refactored around free-form interaction with mahjong tiles. Pla
 
 ### Getting Started
 
+**To Run Locally**
+
 Requirements: Node.js 22 or later, npm, and a desktop browser with WebGL support.
 
 ```bash
@@ -103,6 +128,31 @@ npm start
 ```
 
 Open <http://localhost:8080> in your browser. For a four-player local test, use four separate browser windows and select East, South, West, and North respectively. The server listens on `0.0.0.0:8080` by default. Set the `PORT` environment variable to use another port, for example `PORT=8081 npm start`.
+
+**To Run on Public Server**
+
+<http://43.143.108.152:8080>
+
+All four players can access the same public URL from different locations and join the same shared mahjong table. Players do not need to install or run the server locally.
+
+### Controls
+
+**Keyboard Shortcuts**
+
+| Key | Action |
+|---|---|
+| `A` / `D` | Rotate the currently held mahjong tile |
+| `W` | Flip the currently held mahjong tile |
+| `S` | Reset the held tile to face the current player, with no rotation or flipped face. This does not return the tile to its original position. |
+
+**Mouse Controls**
+
+| Action | Function |
+|---|---|
+| Left-click | Pick up / place down a mahjong tile |
+| Right-click | Undo the current pickup operation |
+| Hold and drag the left mouse button | Rotate the camera view |
+| Mouse wheel | Zoom the camera view |
 
 ### Credits, License, and Development
 

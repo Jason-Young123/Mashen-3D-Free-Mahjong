@@ -32,7 +32,7 @@ let diceState = { rolling: false, values: [1, 1], targetValues: null, rollStarte
 let socialInteractionId = 0;
 let emojiReactionId = 0;
 
-const EMOJI_REACTIONS = new Set(['😄', '😂', '😭', '😍', '👍', '❤️', '🤔', '🎉']);
+const EMOJI_REACTIONS = new Set(['😄', '😍', '😉', '😭', '🤔', '🙄', '🤮', '🥵', '☠️', '👍', '👎', '🤏']);
 const AVATARS = ['🐼', '🐻', '🐱', '🐸', '🦊', '🐯', '🐨', '🐵', '🐰', '🦁', '🐙', '🦉', '🐧', '🐹', '🦝', '🐮'];
 
 

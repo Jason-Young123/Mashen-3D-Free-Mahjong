@@ -77,7 +77,7 @@ const SOCIAL_ITEMS = [
   { id: 'rock', icon: '🪨', label: '石头', impact: '💥', color: '#c4b6a2' },
   { id: 'egg', icon: '🥚', label: '鸡蛋', impact: '💦', color: '#f0d27b' },
 ];
-const EMOJI_REACTIONS = ['😄', '😂', '😭', '😍', '👍', '❤️', '🤔', '🎉'];
+const EMOJI_REACTIONS = ['😄', '😍', '😉', '😭', '🤔', '🙄', '🤮', '🥵', '☠️', '👍', '👎', '🤏'];
 
 function makeCanvasTexture(draw, width = 512, height = 512) {
   const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;

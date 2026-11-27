@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { createTileFactory, tileQuaternion } from './tile-factory.js?v=20261127-7';
+import { createTileFactory, tileQuaternion } from './tile-factory.js?v=0.0.2';
 
 const SEAT_NAMES = ['东', '南', '西', '北'];
 const SEAT_YAW = [Math.PI / 2, 0, -Math.PI / 2, Math.PI];

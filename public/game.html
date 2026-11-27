@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>麻神 · 3D Free Mahjong</title>
+<style>
+:root{--gold:#d7ad62;--cream:#f4ead8;--muted:#b8a78c;--panel:rgba(24,19,14,.78)}
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#17120d;color:var(--cream);font-family:"Microsoft YaHei","PingFang SC",serif}#app{position:fixed;inset:0}canvas{display:block;width:100%;height:100%;outline:none;touch-action:none}
+.topbar{position:fixed;z-index:10;top:14px;left:18px;right:18px;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none}.brand{font-size:22px;font-weight:900;letter-spacing:.18em;color:#e8c783;text-shadow:0 2px 14px #0009}.brand small{display:block;margin-top:3px;font:9px "Times New Roman",serif;letter-spacing:.32em;color:#b9a17a}.top-actions{display:flex;gap:8px;pointer-events:auto}.top-actions button{border:1px solid #d7ad6260;border-radius:8px;padding:9px 13px;background:var(--panel);color:#f7dfaa;cursor:pointer;font-size:12px;backdrop-filter:blur(10px)}.top-actions button:hover{background:#8b633b66;border-color:var(--gold)}
+.status{position:fixed;z-index:10;top:68px;left:20px;padding:7px 10px;border:1px solid #d7ad6230;border-radius:7px;background:var(--panel);font-size:11px;color:var(--muted);pointer-events:none}.status.online{color:#9ce0ae}.status.offline{color:#ff9d8e}
+.score-card{position:fixed;z-index:10;min-width:158px;padding:10px 13px;border:1px solid #d7ad6245;border-radius:10px;background:var(--panel);backdrop-filter:blur(12px);box-shadow:0 8px 24px #0004;display:flex;align-items:center;gap:10px}.score-card .avatar{width:46px;height:46px;flex:0 0 46px;display:grid;place-items:center;border-radius:50%;background:#ffffff12;border:1px solid #d7ad6245;font-size:31px;line-height:1}.score-card.action-flash{animation:seatFlash .48s ease-in-out 3}@keyframes seatFlash{0%,100%{border-color:var(--action-color,#d7ad62);box-shadow:0 0 0 0 transparent}45%{border-color:var(--action-color,#d7ad62);box-shadow:0 0 22px 7px color-mix(in srgb,var(--action-color,#d7ad62) 70%,transparent)}}.action-pop{position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);z-index:20;font-size:29px;font-weight:1000;letter-spacing:.08em;white-space:nowrap;text-shadow:0 2px 5px #000,0 0 14px currentColor;pointer-events:none;animation:actionFade 3s ease-out forwards}.score-card.right .action-pop,.score-card.right .score-delta-pop{left:auto;right:calc(100% + 12px)}@keyframes actionFade{0%{opacity:0;transform:translateY(-40%) scale(.8)}12%{opacity:1;transform:translateY(-50%) scale(1.08)}22%,72%{opacity:1;transform:translateY(-50%) scale(1)}100%{opacity:0;transform:translateY(-60%) scale(.94)}}.score-card.score-flash{animation:scoreFlash .48s ease-in-out 3}@keyframes scoreFlash{0%,100%{border-color:var(--score-color,#65e0a2);box-shadow:0 0 0 0 transparent}45%{border-color:var(--score-color,#65e0a2);box-shadow:0 0 22px 7px color-mix(in srgb,var(--score-color,#65e0a2) 72%,transparent)}}.score-delta-pop{position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);z-index:22;font-size:29px;font-weight:1000;letter-spacing:.06em;white-space:nowrap;text-shadow:0 2px 5px #000,0 0 14px currentColor;pointer-events:none;animation:actionFade 3s ease-out forwards}.score-card .seat{font-size:10px;letter-spacing:.12em;color:var(--gold)}.score-card .name{font-size:12px;max-width:86px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.score-card .score-lines{display:grid;gap:2px;margin-top:3px}.score-card .score-row{display:flex;align-items:baseline;gap:5px;line-height:1.15}.score-card .score-label{font-size:9px;color:#b8a78c;white-space:nowrap}.score-card .score{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;color:#f4dfad;margin-top:0}.score-card .score.total{font-size:11px;color:#d5c29d}.score-card .score.negative{color:#e8a09a}.score-card .edit{border:1px solid #d7ad6240;background:#d7ad6215;color:#e8c783;border-radius:6px;padding:5px 7px;cursor:pointer;font-size:10px;white-space:nowrap}.score-card.bottom{left:50%;bottom:6px;transform:translateX(-50%)}.score-card.top{left:50%;top:6px;transform:translateX(-50%)}.score-card.left{left:18px;top:50%;transform:translateY(-50%)}.score-card.right{right:18px;top:50%;transform:translateY(-50%)}.score-card.me{border-color:#e6c47a;box-shadow:0 0 0 1px #e6c47a35,0 8px 24px #0005}.score-card.disconnected{opacity:.48}
+.action-buttons{position:fixed;z-index:12;right:22px;bottom:22px;display:flex;gap:11px;align-items:center}.action-btn{width:62px;height:62px;border-radius:50%;border:2px solid currentColor;background:rgba(20,16,12,.86);backdrop-filter:blur(10px);font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 5px 18px #0007;transition:transform .12s,filter .12s}.action-btn:hover{transform:translateY(-3px);filter:brightness(1.25)}.action-btn:active{transform:scale(.94)}.action-btn.chi{color:#43d7ff;box-shadow:0 0 15px #43d7ff35}.action-btn.penggang{color:#ffbd55;box-shadow:0 0 15px #ffbd5535}.action-btn.hu{color:#ff5c83;box-shadow:0 0 15px #ff5c8335}.help{position:fixed;z-index:10;left:18px;bottom:8px;max-width:min(460px,calc(100vw - 36px));padding:7px 10px;border:1px solid #d7ad6230;border-radius:9px;background:rgba(20,16,12,.74);font-size:10px;line-height:1.6;color:#c7b797;text-align:left;white-space:normal;pointer-events:none}.help kbd{display:inline-block;padding:1px 5px;margin:0 2px;border:1px solid #d7ad6255;border-radius:4px;color:#ffe5ac;background:#ffffff0b;font:10px inherit}
+.toast{position:fixed;z-index:30;left:50%;top:20%;transform:translate(-50%,-8px);opacity:0;pointer-events:none;padding:11px 20px;border:1px solid var(--gold);border-radius:9px;background:rgba(24,19,14,.92);color:#ffe7b4;font-size:13px;transition:opacity .18s,transform .18s}.toast.show{opacity:1;transform:translate(-50%,0)}.loader{position:fixed;z-index:50;inset:0;display:grid;place-items:center;background:#17120d;color:#d7ad62;letter-spacing:.25em;font-size:12px;transition:opacity .35s}.loader.hide{opacity:0;pointer-events:none}
+@media(max-width:720px){.action-buttons{right:8px;bottom:62px;gap:6px}.action-btn{width:48px;height:48px;font-size:14px}.topbar{top:8px;left:8px;right:8px}.brand{font-size:17px}.top-actions button{padding:7px 8px;font-size:10px}.score-card{min-width:100px;padding:7px 8px;gap:6px}.score-card.left{left:6px}.score-card.right{right:6px}.score-card.bottom{bottom:6px}.score-card.top{top:6px}.help{bottom:8px;font-size:9px;max-width:94vw;white-space:normal}.status{top:52px;left:8px}}
+
+.round-status{position:fixed;z-index:10;top:108px;left:20px;padding:6px 10px;border:1px solid #d7ad6230;border-radius:7px;background:var(--panel);font-size:11px;color:#e5c98f;pointer-events:none}
+.style-panel{position:fixed;z-index:12;left:18px;bottom:92px;width:230px;padding:11px 13px;border:1px solid #d7ad6250;border-radius:10px;background:rgba(24,19,14,.86);backdrop-filter:blur(12px);box-shadow:0 8px 24px #0005;font-size:11px;color:#e8d7b5}
+.style-title{font-size:12px;font-weight:800;letter-spacing:.12em;color:#e8c783;margin-bottom:8px}
+.style-panel label{display:grid;grid-template-columns:66px 1fr 34px;align-items:center;gap:7px;margin:7px 0;color:#cdbb98}
+.style-panel select{grid-column:2/4;width:100%;border:1px solid #d7ad6250;border-radius:5px;padding:4px 6px;background:#282016;color:#f2dfb8;font-size:11px;outline:none}
+.style-panel input[type=range]{width:100%;accent-color:#d7ad62;min-width:0}
+.style-panel span{text-align:right;font-variant-numeric:tabular-nums;color:#e8c783}
+.ledger-toggle{position:fixed;z-index:15;right:20px;top:68px;bottom:auto;border:1px solid #d7ad6280;border-radius:9px;padding:8px 13px;background:rgba(24,19,14,.92);color:#f7dfaa;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 5px 18px #0007;letter-spacing:.08em}
+.ledger-toggle:hover{background:#8b633b;border-color:var(--gold)}
+.ledger-panel{position:fixed;z-index:14;right:20px;top:110px;bottom:auto;width:min(394px,calc(100vw - 40px));max-height:25vh;border:1px solid #d7ad6265;border-radius:12px;background:rgba(24,19,14,.94);backdrop-filter:blur(14px);box-shadow:0 12px 36px #0008;overflow:hidden}
+.ledger-heading{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-bottom:1px solid #d7ad6235;color:#f0d59e}.ledger-heading strong{font-size:12px}.ledger-heading span{font-size:9px;color:#b8a78c}
+.ledger-scroll{max-height:calc(25vh - 34px);overflow:auto;overscroll-behavior:contain}
+.ledger-table{width:100%;max-width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px;font-variant-numeric:tabular-nums}.ledger-table th,.ledger-table td{padding:4px 4px;text-align:center;border-bottom:1px solid #d7ad6222;color:#e8dcc5}.ledger-table thead th{position:sticky;top:0;z-index:1;background:#30251a;color:#d9bd83;font-weight:800;padding:5px 4px}.ledger-table th:first-child,.ledger-table td:first-child{width:72px}.ledger-table th:not(:first-child),.ledger-table td:not(:first-child){width:80px}.ledger-table .my-seat{background:rgba(215,173,98,.12);color:#ffe2a0}.ledger-table tbody tr.current-round{background:rgba(63,137,91,.2);box-shadow:inset 3px 0 #70c895}.ledger-table tbody tr.current-round td{color:#fff0c9}.ledger-table .round-label{font-weight:800;color:#e8c783}.ledger-cell-score{font-size:11px;font-weight:800}.ledger-table tfoot tr.total-row{background:rgba(215,173,98,.13);border-top:1px solid #d7ad6270}.ledger-table tfoot td{font-weight:900;color:#f5dfaa;border-bottom:0;padding:5px 4px}.ledger-table tfoot td:first-child{color:#e8c783}
+.center-notice{position:fixed;z-index:45;left:50%;top:50%;transform:translate(-50%,-42%);max-width:min(88vw,680px);padding:15px 26px;border:1px solid #e0bc70;border-radius:12px;background:rgba(20,16,12,.94);box-shadow:0 12px 40px #0009;color:#ffe6b0;font-size:18px;font-weight:800;letter-spacing:.04em;text-align:center;opacity:0;pointer-events:none;transition:opacity .35s,transform .35s}
+.center-notice.show{opacity:1;transform:translate(-50%,-50%)}
+.dialog-overlay{position:fixed;z-index:60;inset:0;display:grid;place-items:center;padding:20px;background:rgba(0,0,0,.62);backdrop-filter:blur(5px)}.dialog-overlay[hidden],.ledger-panel[hidden]{display:none}
+.dialog-card{width:min(390px,92vw);padding:25px 24px 20px;border:1px solid #d7ad6280;border-radius:16px;background:linear-gradient(145deg,#302419,#17120d);box-shadow:0 22px 70px #000b;text-align:center;color:#f4ead8}
+.dialog-mark{display:grid;place-items:center;width:42px;height:42px;margin:0 auto 12px;border:1px solid #d7ad6270;border-radius:50%;color:#e8c783;font-size:21px}.dialog-card h2{margin:0 0 10px;font-size:17px;color:#f2d59b}.dialog-card p{margin:0;color:#cdbb98;font-size:13px;line-height:1.8;white-space:pre-line}.dialog-actions{display:flex;justify-content:center;gap:12px;margin-top:22px}.dialog-actions button{min-width:112px;border-radius:8px;padding:9px 15px;font-size:12px;font-weight:800;cursor:pointer}.dialog-cancel{border:1px solid #9c8260;background:#ffffff0b;color:#d9c7a7}.dialog-confirm{border:1px solid #d7ad62;background:#b2823e;color:#1c140b}.dialog-actions button:disabled{opacity:.45;cursor:default}
+.score-edit-card .score-mode-switch{display:flex;gap:8px;margin:17px 0 14px}.score-mode-switch button{flex:1;border:1px solid #d7ad6250;border-radius:7px;padding:8px;background:#ffffff08;color:#cdbb98;font-size:12px;cursor:pointer}.score-mode-switch button.active{border-color:#d7ad62;background:#d7ad6228;color:#ffe7b4}.score-input-row{display:flex;align-items:center;gap:10px;text-align:left;color:#cdbb98;font-size:12px}.score-input-row input{width:120px;margin-left:auto;padding:9px 10px;border:1px solid #d7ad6250;border-radius:7px;background:#ffffff0b;color:#f4ead8;text-align:center;font:700 16px "Microsoft YaHei","PingFang SC",serif;outline:none}.score-edit-preview{min-height:22px;margin-top:12px!important;color:#e8c783!important;font-weight:700}.score-edit-card .dialog-actions button:disabled{opacity:.35;cursor:not-allowed}
+@media(max-width:720px){.round-status{top:90px;left:8px}.style-panel{left:8px;bottom:104px;width:205px;padding:8px 10px}.style-panel label{grid-template-columns:58px 1fr 30px;gap:5px}.ledger-toggle{right:8px;top:52px;bottom:auto}.ledger-panel{right:8px;top:94px;bottom:auto;width:min(380px,calc(100vw - 16px));max-height:25vh}.ledger-scroll{max-height:calc(25vh - 34px)}.ledger-table th,.ledger-table td{padding:4px 2px;font-size:9px}.ledger-table{width:100%}.ledger-table th:first-child,.ledger-table td:first-child{width:58px}.ledger-table th:not(:first-child),.ledger-table td:not(:first-child){width:80px}.center-notice{font-size:14px;padding:12px 16px}.dialog-card{padding:20px 17px}.dialog-actions button{min-width:95px}.help{max-width:min(52vw,360px);left:8px;right:auto;bottom:8px;transform:none;text-align:left}}
+
+</style>
+<script type="importmap">
+{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}
+</script>
+</head>
+<body>
+<div id="app"></div>
+<div class="topbar">
+  <div class="brand">麻神<small>· 3D FREE MAHJONG</small></div>
+  <div class="top-actions">
+    <button id="shuffleBtn" title="申请开始下一局，需要四位玩家全部确认">下一局</button>
+    <button id="mainViewBtn" title="恢复当前座位的默认视角">主视角</button>
+    <button id="fullscreenBtn">全屏</button>
+    <button id="leaveBtn">离开</button>
+  </div>
+</div>
+<div class="status" id="status">连接中…</div>
+<div class="round-status" id="roundStatus">对局数：1</div>
+<div id="scoreboards"></div>
+<div class="help">
+  左键拾取/放下　<kbd>W</kbd> 翻面　<kbd>S</kbd> 复位　<kbd>右键</kbd> 撤销　<kbd>A</kbd>/<kbd>D</kbd> 旋转　中央方位标切换庄家 · 点击中央骰子槽掷骰子　左键拖动旋转视角　滚轮缩放
+</div>
+<div class="style-panel" id="stylePanel">
+  <div class="style-title">视角风格</div>
+  <label>背景明暗 <input id="backgroundBrightness" type="range" min="0.45" max="1.55" step="0.05" value="1"><span id="backgroundBrightnessValue">1.00</span></label>
+  <label>牌桌颜色 <select id="tableColor"><option value="#176B45">经典绿</option><option value="#17617E">海军蓝</option><option value="#742D3C">酒红色</option><option value="#374B40">墨灰色</option><option value="#89633F">沙棕色</option></select></label>
+  <label>牌桌明暗 <input id="tableBrightness" type="range" min="0.55" max="1.45" step="0.05" value="1"><span id="tableBrightnessValue">1.00</span></label>
+  <label>牌背颜色 <select id="backColor"><option value="#1b6845">经典绿</option><option value="#244f91">宝石蓝</option><option value="#8a3038">绛红色</option><option value="#333b45">曜石灰</option><option value="#b08a43">鎏金色</option></select></label>
+  <label>牌面明暗 <input id="faceBrightness" type="range" min="0.45" max="1.55" step="0.05" value="1"><span id="faceBrightnessValue">1.00</span></label>
+</div>
+<button class="ledger-toggle" id="ledgerToggle" aria-expanded="false">流水</button>
+<section class="ledger-panel" id="ledgerPanel" hidden>
+  <div class="ledger-heading"><strong>对局流水</strong><span>本局分数 / 累计总分</span></div>
+  <div class="ledger-scroll" id="ledgerScroll"></div>
+</section>
+<div class="center-notice" id="centerNotice" aria-live="polite"></div>
+<div class="dialog-overlay" id="dialogOverlay" hidden>
+  <div class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+    <div class="dialog-mark">麻</div>
+    <h2 id="dialogTitle">请确认操作</h2>
+    <p id="dialogMessage"></p>
+    <div class="dialog-actions"><button id="dialogCancel" class="dialog-cancel">取消</button><button id="dialogConfirm" class="dialog-confirm">确认</button></div>
+  </div>
+</div>
+<div class="dialog-overlay" id="scoreEditOverlay" hidden>
+  <div class="dialog-card score-edit-card" role="dialog" aria-modal="true" aria-labelledby="scoreEditTitle">
+    <div class="dialog-mark">分</div>
+    <h2 id="scoreEditTitle">修改本局分数</h2>
+    <p id="scoreEditCurrent"></p>
+    <div class="score-mode-switch"><button type="button" data-score-mode="delta" class="active">增量修改</button><button type="button" data-score-mode="set">直接设定</button></div>
+    <label class="score-input-row"><span id="scoreEditLabel">分数增量</span><input id="scoreEditInput" type="number" step="1" value="10" inputmode="numeric"></label>
+    <p class="score-edit-preview" id="scoreEditPreview"></p>
+    <div class="dialog-actions"><button id="scoreEditCancel" class="dialog-cancel">取消</button><button id="scoreEditConfirm" class="dialog-confirm">确认修改</button></div>
+  </div>
+</div>
+<div class="action-buttons" aria-label="玩家动作">
+  <button class="action-btn chi" data-action="chi" title="宣布吃">吃</button>
+  <button class="action-btn penggang" data-action="penggang" title="宣布碰或杠">碰/杠</button>
+  <button class="action-btn hu" data-action="hu" title="宣布胡">胡</button>
+</div>
+<div class="toast" id="toast"></div>
+<div class="loader" id="loader">正在构建 3D 麻将桌…</div>
+<script type="module" src="/src/free-main.js?v=20261127-7"></script>
+</body>
+</html>

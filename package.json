@@ -1,0 +1,17 @@
+{
+  "name": "mashen-3d-free-mahjong",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "麻神 · 3D Free Mahjong — a four-player shared 3D mahjong table for free-form play",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "three": "~0.180.0",
+    "ws": "~8.21.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

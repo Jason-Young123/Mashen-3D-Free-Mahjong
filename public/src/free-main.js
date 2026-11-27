@@ -37,6 +37,7 @@ const ledgerToggle = document.querySelector('#ledgerToggle');
 const ledgerPanel = document.querySelector('#ledgerPanel');
 const ledgerScroll = document.querySelector('#ledgerScroll');
 const scoreboardRoot = document.querySelector('#scoreboards');
+const socialEffectsRoot = document.querySelector('#socialEffects');
 const shuffleButton = document.querySelector('#shuffleBtn');
 const fullscreenButton = document.querySelector('#fullscreenBtn');
 const mainViewButton = document.querySelector('#mainViewBtn');
@@ -63,12 +64,19 @@ let ws, connected = false, heldId = null, pendingGrabId = null;
 let hoveredTileId = null, lastMoveSent = 0;
 let tiles = new Map(), tileMeshes = new Map(), players = [null, null, null, null], scores = [0, 0, 0, 0];
 let roundNumber = 1, roundHistory = [], ledgerVisible = false, activeNextRoundProposal = null;
+let openSocialSeat = null;
 let toastTimer = null, centerNoticeTimer = null, dialogConfirmHandler = null, dialogCancelHandler = null;
 let pointerNdc = new THREE.Vector2(2, 2), pointerInside = false;
 const raycaster = new THREE.Raycaster();
 const tablePlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -TABLE_TOP);
 const floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 3.95);
 const tempPoint = new THREE.Vector3();
+const SOCIAL_ITEMS = [
+  { id: 'flower', icon: '🌹', label: '献花', impact: '✨', color: '#f2a7c7' },
+  { id: 'heart', icon: '❤️', label: '爱心', impact: '💕', color: '#ff6b88' },
+  { id: 'rock', icon: '🪨', label: '石头', impact: '💥', color: '#c4b6a2' },
+  { id: 'egg', icon: '🥚', label: '鸡蛋', impact: '💦', color: '#f0d27b' },
+];
 
 function makeCanvasTexture(draw, width = 512, height = 512) {
   const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
@@ -562,7 +570,66 @@ function setStatus(text, online = connected) {
   statusEl.classList.toggle('offline', !online);
 }
 
+function toggleSocialMenu(seat) {
+  if (seat === mySeat || !players[seat]?.connected) return;
+  openSocialSeat = openSocialSeat === seat ? null : seat;
+  renderScoreboards();
+}
+
+function sendSocialInteraction(targetSeat, item) {
+  if (targetSeat === mySeat || !SOCIAL_ITEMS.some((entry) => entry.id === item)) return;
+  send({ type: 'SOCIAL_INTERACTION', targetSeat, item });
+}
+
+function showSocialImpact(targetAvatar, item) {
+  const entry = SOCIAL_ITEMS.find((value) => value.id === item);
+  if (!entry || !targetAvatar) return;
+  targetAvatar.style.setProperty('--social-hit-color', entry.color);
+  targetAvatar.classList.remove('social-hit');
+  void targetAvatar.offsetWidth;
+  targetAvatar.classList.add('social-hit');
+  setTimeout(() => targetAvatar.classList.remove('social-hit'), 850);
+  const rect = targetAvatar.getBoundingClientRect();
+  const impact = document.createElement('div');
+  impact.className = 'social-impact'; impact.textContent = entry.impact;
+  impact.style.left = `${rect.left + rect.width / 2}px`; impact.style.top = `${rect.top + rect.height / 2}px`;
+  socialEffectsRoot.append(impact);
+  const animation = impact.animate([
+    { transform: 'translate(-50%,-50%) scale(.35) rotate(-18deg)', opacity: 0 },
+    { transform: 'translate(-50%,-70%) scale(1.35) rotate(12deg)', opacity: 1, offset: .35 },
+    { transform: 'translate(-50%,-115%) scale(.8) rotate(0deg)', opacity: 0 },
+  ], { duration: 520, easing: 'ease-out' });
+  animation.onfinish = () => impact.remove();
+}
+
+function animateSocialInteraction(message) {
+  const entry = SOCIAL_ITEMS.find((value) => value.id === message.item);
+  const sourceAvatar = scoreboardRoot.querySelector(`.score-card[data-seat="${message.fromSeat}"] .avatar`);
+  const targetAvatar = scoreboardRoot.querySelector(`.score-card[data-seat="${message.targetSeat}"] .avatar`);
+  if (!entry || !sourceAvatar || !targetAvatar) return;
+  const sourceRect = sourceAvatar.getBoundingClientRect(), targetRect = targetAvatar.getBoundingClientRect();
+  const startX = sourceRect.left + sourceRect.width / 2, startY = sourceRect.top + sourceRect.height / 2;
+  const endX = targetRect.left + targetRect.width / 2, endY = targetRect.top + targetRect.height / 2;
+  const dx = endX - startX, dy = endY - startY;
+  const arc = -Math.min(105, Math.max(48, Math.hypot(dx, dy) * .13));
+  const projectile = document.createElement('div');
+  projectile.className = `social-projectile social-projectile-${entry.id}`; projectile.textContent = entry.icon;
+  projectile.style.left = `${startX}px`; projectile.style.top = `${startY}px`;
+  socialEffectsRoot.append(projectile);
+  const animation = projectile.animate([
+    { transform: 'translate(-50%,-50%) translate(0px,0px) scale(.55) rotate(-18deg)', opacity: .15 },
+    { transform: `translate(-50%,-50%) translate(${dx * .5}px,${dy * .5 + arc}px) scale(1.2) rotate(185deg)`, opacity: 1, offset: .56 },
+    { transform: `translate(-50%,-50%) translate(${dx}px,${dy}px) scale(.72) rotate(360deg)`, opacity: .25 },
+  ], { duration: 720, easing: 'cubic-bezier(.18,.72,.25,1)' });
+  animation.onfinish = () => {
+    projectile.remove();
+    const currentTarget = scoreboardRoot.querySelector(`.score-card[data-seat="${message.targetSeat}"] .avatar`);
+    showSocialImpact(currentTarget || targetAvatar, entry.id);
+  };
+}
+
 function renderScoreboards() {
+  if (openSocialSeat !== null && (openSocialSeat === mySeat || !players[openSocialSeat]?.connected)) openSocialSeat = null;
   scoreboardRoot.replaceChildren();
   const positions = ['bottom', 'left', 'top', 'right'];
   for (let seat = 0; seat < 4; seat++) {
@@ -570,8 +637,28 @@ function renderScoreboards() {
     const player = players[seat];
     const card = document.createElement('div');
     card.dataset.seat = String(seat);
-    card.className = `score-card ${positions[relative]}${seat === mySeat ? ' me' : ''}${player && !player.connected ? ' disconnected' : ''}`;
+    card.className = `score-card ${positions[relative]}${seat === mySeat ? ' me' : ''}${player && !player.connected ? ' disconnected' : ''}${openSocialSeat === seat ? ' social-open' : ''}`;
+    const avatarWrap = document.createElement('div'); avatarWrap.className = 'avatar-wrap';
     const avatar = document.createElement('div'); avatar.className = 'avatar'; avatar.textContent = player?.avatar || '👤';
+    if (seat !== mySeat && player?.connected) {
+      avatar.classList.add('interactive'); avatar.setAttribute('role', 'button'); avatar.tabIndex = 0;
+      avatar.title = `点击与${SEAT_NAMES[seat]}位${player.name}互动`;
+      avatar.addEventListener('click', (event) => { event.stopPropagation(); toggleSocialMenu(seat); });
+      avatar.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); toggleSocialMenu(seat); }
+      });
+    }
+    avatarWrap.append(avatar);
+    if (openSocialSeat === seat) {
+      const menu = document.createElement('div'); menu.className = 'social-menu';
+      for (const item of SOCIAL_ITEMS) {
+        const button = document.createElement('button'); button.type = 'button'; button.className = `social-option social-option-${item.id}`;
+        button.title = item.label; button.innerHTML = `<span class="social-icon">${item.icon}</span><span>${item.label}</span>`;
+        button.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); sendSocialInteraction(seat, item.id); });
+        menu.append(button);
+      }
+      avatarWrap.append(menu);
+    }
     const info = document.createElement('div'); info.style.minWidth = '0';
     const dir = document.createElement('div'); dir.className = 'seat'; dir.textContent = `${SEAT_NAMES[seat]}位${seat === mySeat ? ' · 你' : ''}`;
     const name = document.createElement('div'); name.className = 'name'; name.textContent = player?.name || '等待玩家';
@@ -588,7 +675,7 @@ function renderScoreboards() {
     totalRow.append(totalLabel, totalScore);
     scoreLines.append(currentRow, totalRow);
     info.append(dir, name, scoreLines);
-    card.append(avatar, info);
+    card.append(avatarWrap, info);
     if (seat === mySeat) {
       const edit = document.createElement('button'); edit.className = 'edit'; edit.textContent = '计分';
       edit.title = '修改自己的本局分数';
@@ -795,6 +882,8 @@ function connect() {
       finishDiceRoll(message.rollId, message.values);
     } else if (message.type === 'PLAYER_ACTION') {
       showPlayerAction(message.seat, message.action);
+    } else if (message.type === 'SOCIAL_INTERACTION') {
+      animateSocialInteraction(message);
     } else if (message.type === 'PLAYER_OFFLINE') {
       showCenterNotice(`${SEAT_NAMES[message.seat]}位${message.name}已离线`);
     } else if (message.type === 'NOTICE') {
@@ -1013,6 +1102,13 @@ function bindInteraction() {
   canvas.addEventListener('pointerdown', onPointerDown, true);
   window.addEventListener('pointerdown', onRightPointerDown, true);
   window.addEventListener('pointermove', onPointerMove);
+  document.addEventListener('pointerdown', (event) => {
+    const target = event.target;
+    if (openSocialSeat !== null && !target.closest?.('.social-menu') && !target.closest?.('.avatar.interactive')) {
+      openSocialSeat = null;
+      renderScoreboards();
+    }
+  });
   canvas.addEventListener('pointerleave', () => { pointerInside = false; cursorDot.visible = false; setHover(null); });
   window.addEventListener('contextmenu', (event) => event.preventDefault());
   window.addEventListener('keydown', onKeyDown);

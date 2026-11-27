@@ -29,6 +29,7 @@ let tiles = new Map();
 let dealerSeat = null;
 let diceTimer = null;
 let diceState = { rolling: false, values: [1, 1], targetValues: null, rollStartedAt: 0, rollEndsAt: 0, durationMs: 0, spin: [], rollId: 0 };
+let socialInteractionId = 0;
 
 const AVATARS = ['🐼', '🐻', '🐱', '🐸', '🦊', '🐯', '🐨', '🐵', '🐰', '🦁', '🐙', '🦉', '🐧', '🐹', '🦝', '🐮'];
 
@@ -601,6 +602,19 @@ function handleMessage(ws, message) {
     const action = String(message.action || '');
     if (!['chi', 'penggang', 'hu'].includes(action)) return;
     broadcast({ type: 'PLAYER_ACTION', seat, action });
+    return;
+  }
+
+  if (message.type === 'SOCIAL_INTERACTION') {
+    const targetSeat = Number(message.targetSeat), item = String(message.item || '');
+    if (!Number.isInteger(targetSeat) || targetSeat < 0 || targetSeat > 3 || targetSeat === seat || !['flower', 'heart', 'rock', 'egg'].includes(item)) return;
+    const target = players[targetSeat];
+    if (!target || target.ws.readyState !== WebSocket.OPEN) return send(ws, { type: 'NOTICE', message: '目标玩家当前不在线' });
+    const now = Date.now();
+    ws.socialMessageTimes = (ws.socialMessageTimes || []).filter((time) => now - time < 1000);
+    if (ws.socialMessageTimes.length >= 15) return send(ws, { type: 'NOTICE', message: '互动太频繁，请稍后再试' });
+    ws.socialMessageTimes.push(now);
+    broadcast({ type: 'SOCIAL_INTERACTION', id: ++socialInteractionId, fromSeat: seat, targetSeat, item, createdAt: now }, (client) => Number.isInteger(client.seat));
     return;
   }
 

@@ -71,7 +71,7 @@ http://localhost:8080
 ### 项目结构
 
 ```text
-麻神 · 3D Free Mahjong/
+Mashen-3D-Free-Mahjong/
 ├── server.js
 ├── package.json
 ├── LICENSE
@@ -153,6 +153,26 @@ All four players can access the same public URL from different locations and joi
 | Right-click | Undo the current pickup operation |
 | Hold and drag the left mouse button | Rotate the camera view |
 | Mouse wheel | Zoom the camera view |
+
+### Project Structure
+
+```text
+Mashen-3D-Free-Mahjong/
+├── server.js
+├── package.json
+├── LICENSE
+├── README.md
+├── design.prompt
+└── public/
+    ├── index.html
+    ├── game.html
+    ├── assets/
+    │   └── tiles-atlas.png
+    └── src/
+        ├── lobby.js
+        ├── free-main.js
+        └── tile-factory.js
+```
 
 ### Credits, License, and Development
 

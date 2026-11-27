@@ -30,7 +30,9 @@ let dealerSeat = null;
 let diceTimer = null;
 let diceState = { rolling: false, values: [1, 1], targetValues: null, rollStartedAt: 0, rollEndsAt: 0, durationMs: 0, spin: [], rollId: 0 };
 let socialInteractionId = 0;
+let emojiReactionId = 0;
 
+const EMOJI_REACTIONS = new Set(['😄', '😂', '😭', '😍', '👍', '❤️', '🤔', '🎉']);
 const AVATARS = ['🐼', '🐻', '🐱', '🐸', '🦊', '🐯', '🐨', '🐵', '🐰', '🦁', '🐙', '🦉', '🐧', '🐹', '🦝', '🐮'];
 
 
@@ -615,6 +617,17 @@ function handleMessage(ws, message) {
     if (ws.socialMessageTimes.length >= 15) return send(ws, { type: 'NOTICE', message: '互动太频繁，请稍后再试' });
     ws.socialMessageTimes.push(now);
     broadcast({ type: 'SOCIAL_INTERACTION', id: ++socialInteractionId, fromSeat: seat, targetSeat, item, createdAt: now }, (client) => Number.isInteger(client.seat));
+    return;
+  }
+
+  if (message.type === 'EMOJI_REACTION') {
+    const emoji = String(message.emoji || '');
+    if (!EMOJI_REACTIONS.has(emoji)) return;
+    const now = Date.now();
+    ws.emojiReactionTimes = (ws.emojiReactionTimes || []).filter((time) => now - time < 1000);
+    if (ws.emojiReactionTimes.length >= 12) return send(ws, { type: 'NOTICE', message: '表情发送太频繁，请稍后再试' });
+    ws.emojiReactionTimes.push(now);
+    broadcast({ type: 'EMOJI_REACTION', id: ++emojiReactionId, seat, emoji, createdAt: now }, (client) => Number.isInteger(client.seat));
     return;
   }
 

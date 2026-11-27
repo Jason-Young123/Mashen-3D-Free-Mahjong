@@ -64,7 +64,7 @@ let ws, connected = false, heldId = null, pendingGrabId = null;
 let hoveredTileId = null, lastMoveSent = 0;
 let tiles = new Map(), tileMeshes = new Map(), players = [null, null, null, null], scores = [0, 0, 0, 0];
 let roundNumber = 1, roundHistory = [], ledgerVisible = false, activeNextRoundProposal = null;
-let openSocialSeat = null;
+let openSocialSeat = null, openEmojiMenu = false;
 let toastTimer = null, centerNoticeTimer = null, dialogConfirmHandler = null, dialogCancelHandler = null;
 let pointerNdc = new THREE.Vector2(2, 2), pointerInside = false;
 const raycaster = new THREE.Raycaster();
@@ -77,6 +77,7 @@ const SOCIAL_ITEMS = [
   { id: 'rock', icon: '🪨', label: '石头', impact: '💥', color: '#c4b6a2' },
   { id: 'egg', icon: '🥚', label: '鸡蛋', impact: '💦', color: '#f0d27b' },
 ];
+const EMOJI_REACTIONS = ['😄', '😂', '😭', '😍', '👍', '❤️', '🤔', '🎉'];
 
 function makeCanvasTexture(draw, width = 512, height = 512) {
   const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
@@ -572,8 +573,54 @@ function setStatus(text, online = connected) {
 
 function toggleSocialMenu(seat) {
   if (seat === mySeat || !players[seat]?.connected) return;
+  openEmojiMenu = false;
   openSocialSeat = openSocialSeat === seat ? null : seat;
   renderScoreboards();
+}
+
+function toggleEmojiMenu() {
+  if (!players[mySeat]?.connected) return;
+  openSocialSeat = null;
+  openEmojiMenu = !openEmojiMenu;
+  renderScoreboards();
+}
+
+function sendEmojiReaction(emoji) {
+  if (!EMOJI_REACTIONS.includes(emoji)) return;
+  send({ type: 'EMOJI_REACTION', emoji });
+  openEmojiMenu = false;
+  renderScoreboards();
+}
+
+function animateEmojiReaction(message) {
+  const seat = Number(message.seat), emoji = String(message.emoji || '');
+  if (!Number.isInteger(seat) || seat < 0 || seat > 3 || !EMOJI_REACTIONS.includes(emoji)) return;
+  const avatar = scoreboardRoot.querySelector(`.score-card[data-seat="${seat}"] .avatar`);
+  if (!avatar) return;
+  const rect = avatar.getBoundingClientRect(), card = avatar.closest('.score-card');
+  let left = rect.left + rect.width / 2, top = rect.top - 6, position = 'above';
+  if (card?.classList.contains('top')) { top = rect.bottom + 6; position = 'below'; }
+  else if (card?.classList.contains('left')) { left = rect.right + 7; top = rect.top + rect.height / 2; position = 'right'; }
+  else if (card?.classList.contains('right')) { left = rect.left - 7; top = rect.top + rect.height / 2; position = 'left'; }
+  const bubble = document.createElement('div');
+  bubble.className = 'emoji-reaction-bubble'; bubble.dataset.position = position; bubble.textContent = emoji;
+  bubble.setAttribute('aria-hidden', 'true');
+  bubble.style.left = `${Math.max(8, Math.min(innerWidth - 8, left))}px`;
+  bubble.style.top = `${Math.max(8, Math.min(innerHeight - 8, top))}px`;
+  socialEffectsRoot.append(bubble);
+  const transforms = {
+    above: ['translate(-50%,-78%) scale(.62)', 'translate(-50%,-100%) scale(1.08)', 'translate(-50%,-100%) scale(1)', 'translate(-50%,-124%) scale(.92)'],
+    below: ['translate(-50%, -22%) scale(.62)', 'translate(-50%, 0) scale(1.08)', 'translate(-50%, 0) scale(1)', 'translate(-50%, 24%) scale(.92)'],
+    left: ['translate(-78%,-50%) scale(.62)', 'translate(-100%,-50%) scale(1.08)', 'translate(-100%,-50%) scale(1)', 'translate(-124%,-50%) scale(.92)'],
+    right: ['translate(-22%,-50%) scale(.62)', 'translate(0,-50%) scale(1.08)', 'translate(0,-50%) scale(1)', 'translate(24%,-50%) scale(.92)'],
+  }[position];
+  const animation = bubble.animate([
+    { transform: transforms[0], opacity: 0 },
+    { transform: transforms[1], opacity: 1, offset: .12 },
+    { transform: transforms[2], opacity: 1, offset: .78 },
+    { transform: transforms[3], opacity: 0 },
+  ], { duration: 3200, easing: 'ease-out' });
+  animation.onfinish = () => bubble.remove();
 }
 
 function sendSocialInteraction(targetSeat, item) {
@@ -630,6 +677,7 @@ function animateSocialInteraction(message) {
 
 function renderScoreboards() {
   if (openSocialSeat !== null && (openSocialSeat === mySeat || !players[openSocialSeat]?.connected)) openSocialSeat = null;
+  if (!players[mySeat]?.connected) openEmojiMenu = false;
   scoreboardRoot.replaceChildren();
   const positions = ['bottom', 'left', 'top', 'right'];
   for (let seat = 0; seat < 4; seat++) {
@@ -637,18 +685,27 @@ function renderScoreboards() {
     const player = players[seat];
     const card = document.createElement('div');
     card.dataset.seat = String(seat);
-    card.className = `score-card ${positions[relative]}${seat === mySeat ? ' me' : ''}${player && !player.connected ? ' disconnected' : ''}${openSocialSeat === seat ? ' social-open' : ''}`;
+    card.className = `score-card ${positions[relative]}${seat === mySeat ? ' me' : ''}${player && !player.connected ? ' disconnected' : ''}${openSocialSeat === seat ? ' social-open' : ''}${seat === mySeat && openEmojiMenu ? ' emoji-open' : ''}`;
     const avatarWrap = document.createElement('div'); avatarWrap.className = 'avatar-wrap';
     const avatar = document.createElement('div'); avatar.className = 'avatar'; avatar.textContent = player?.avatar || '👤';
-    if (seat !== mySeat && player?.connected) {
+    if (player?.connected) {
       avatar.classList.add('interactive'); avatar.setAttribute('role', 'button'); avatar.tabIndex = 0;
-      avatar.title = `点击与${SEAT_NAMES[seat]}位${player.name}互动`;
-      avatar.addEventListener('click', (event) => { event.stopPropagation(); toggleSocialMenu(seat); });
+      avatar.title = seat === mySeat ? '点击选择表情' : `点击与${SEAT_NAMES[seat]}位${player.name}互动`;
+      avatar.addEventListener('click', (event) => { event.stopPropagation(); seat === mySeat ? toggleEmojiMenu() : toggleSocialMenu(seat); });
       avatar.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); toggleSocialMenu(seat); }
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); seat === mySeat ? toggleEmojiMenu() : toggleSocialMenu(seat); }
       });
     }
     avatarWrap.append(avatar);
+    if (seat === mySeat && openEmojiMenu) {
+      const menu = document.createElement('div'); menu.className = 'emoji-menu'; menu.setAttribute('aria-label', '选择表情');
+      for (const emoji of EMOJI_REACTIONS) {
+        const button = document.createElement('button'); button.type = 'button'; button.className = 'emoji-option'; button.textContent = emoji; button.title = `发送 ${emoji}`;
+        button.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); sendEmojiReaction(emoji); });
+        menu.append(button);
+      }
+      avatarWrap.append(menu);
+    }
     if (openSocialSeat === seat) {
       const menu = document.createElement('div'); menu.className = 'social-menu';
       for (const item of SOCIAL_ITEMS) {
@@ -884,6 +941,8 @@ function connect() {
       showPlayerAction(message.seat, message.action);
     } else if (message.type === 'SOCIAL_INTERACTION') {
       animateSocialInteraction(message);
+    } else if (message.type === 'EMOJI_REACTION') {
+      animateEmojiReaction(message);
     } else if (message.type === 'PLAYER_OFFLINE') {
       showCenterNotice(`${SEAT_NAMES[message.seat]}位${message.name}已离线`);
     } else if (message.type === 'NOTICE') {
@@ -1104,8 +1163,8 @@ function bindInteraction() {
   window.addEventListener('pointermove', onPointerMove);
   document.addEventListener('pointerdown', (event) => {
     const target = event.target;
-    if (openSocialSeat !== null && !target.closest?.('.social-menu') && !target.closest?.('.avatar.interactive')) {
-      openSocialSeat = null;
+    if ((openSocialSeat !== null || openEmojiMenu) && !target.closest?.('.social-menu') && !target.closest?.('.emoji-menu') && !target.closest?.('.avatar.interactive')) {
+      openSocialSeat = null; openEmojiMenu = false;
       renderScoreboards();
     }
   });
